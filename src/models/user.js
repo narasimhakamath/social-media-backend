@@ -34,8 +34,18 @@ userSchema.pre('save', async function(next) {
 userSchema.statics.isUsernameExists = async(username) => {
 	const userData = await User.findOne({username});
 	if(userData)
-		return true;
-	return false;
+		throw new Error('Username already exists.');
+}
+
+userSchema.statics.findByCredentials = (username, password) => {
+	let isError = false;
+
+	const user = await User.findOne({username, password});
+	if(!user)
+		isError = true;
+
+
+	
 }
 
 userSchema.methods.toJSON = function() {

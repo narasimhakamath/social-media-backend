@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
 	avatar: {
 		type: Buffer
 	},
-	active: {
+	isActive: {
 		type: Boolean,
 		default: true
 	}

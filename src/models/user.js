@@ -47,8 +47,19 @@ userSchema.pre('save', async function(next) {
 userSchema.statics.isUsernameExists = async(username) => {
 	const userData = await User.findOne({username});
 	if(userData)
-		return true;
-	return false;
+		throw new Error('Username already exists.');
+}
+
+userSchema.statics.findByCredentials = async(username, password) => {
+	const user = await User.findOne({username});
+	if(!user)
+		throw new Error('Invalid credentials.');
+
+	const isMatch = await bcrypt.compare(password, user['password']);
+	if(!isMatch)
+		throw new Error(`Unable to login.`);
+
+	return user;
 }
 
 userSchema.methods.toJSON = function() {

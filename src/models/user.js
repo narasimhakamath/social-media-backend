@@ -31,6 +31,13 @@ userSchema.pre('save', async function(next) {
 	next();
 });
 
+userSchema.statics.isUsernameExists = async(username) => {
+	const userData = await User.findOne({username});
+	if(userData)
+		return true;
+	return false;
+}
+
 userSchema.methods.toJSON = function() {
 	const user = this;
 	const userObject = user.toObject();

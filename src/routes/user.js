@@ -1,6 +1,8 @@
 const express = require('express');
 const User = require('../models/user');
 
+const authentication = require('../middlewares/authentication');
+
 const router = express.Router();
 
 router.post('/users/signup', async (req, res) => {
@@ -29,6 +31,10 @@ router.post('/users/login', async (req, res) => {
 	} catch(e) {
 		res.status(400).json({result: false, message: e.message});
 	}
+});
+
+router.get('/users/me', authentication, async(req, res) => {
+	res.status(200).json({result: true, message: 'Fetching user data.', data: req['user']});
 });
 
 module.exports = router;

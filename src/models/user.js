@@ -29,6 +29,18 @@ const userSchema = new mongoose.Schema({
 	timestamps: true
 });
 
+userSchema.virtual('posts', {
+    ref: 'Post',
+    localField: '_id',
+    foreignField: 'userID'
+});
+
+userSchema.virtual('comments', {
+    ref: 'Comment',
+    localField: '_id',
+    foreignField: 'userID'
+});
+
 userSchema.methods.generateAuthenticationToken = async function() {
 	const user = this;
 	const token = jwt.sign({_id: user._id.toString()}, process.env.JWT_SECRET);

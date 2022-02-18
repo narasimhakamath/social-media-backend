@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const commentSchema = new mongoose.Schema({
-	commentText: {
+	comment: {
 		type: String,
 		required: true,
 		trim: true
@@ -14,7 +14,7 @@ const commentSchema = new mongoose.Schema({
 	userID: {
 		type: mongoose.Schema.Types.ObjectId,
 		required: true,
-		ref: 'User',
+		ref: 'User'
 	}
 }, {
 	timestamps: true

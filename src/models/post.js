@@ -6,14 +6,10 @@ const postSchema = new mongoose.Schema({
 		required: true,
 		trim: true
 	},
-	description: {
+	content: {
 		type: String,
 		required: true
 	},
-	isActive: {
-		type: Boolean,
-		default: true
-	}
 }, {
 	timestamps: true
 });

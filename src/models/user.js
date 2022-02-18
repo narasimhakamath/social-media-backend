@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
 	name: {
@@ -19,10 +20,22 @@ const userSchema = new mongoose.Schema({
 		required: true,
 		trim: true,
 		minlength: 6
+	},
+	token: {
+		type: String,
+		trim: true
 	}
 }, {
 	timestamps: true
 });
+
+userSchema.methods.generateAuthenticationToken = async function() {
+	const user = this;
+	const token = jwt.sign({_id: user._id.toString()}, process.env.JWT_SECRET);
+	user.token = token;
+	await user.save();
+	return token;
+}
 
 userSchema.pre('save', async function(next) {
 	if(this.isModified('password')) {
@@ -34,18 +47,8 @@ userSchema.pre('save', async function(next) {
 userSchema.statics.isUsernameExists = async(username) => {
 	const userData = await User.findOne({username});
 	if(userData)
-		throw new Error('Username already exists.');
-}
-
-userSchema.statics.findByCredentials = (username, password) => {
-	let isError = false;
-
-	const user = await User.findOne({username, password});
-	if(!user)
-		isError = true;
-
-
-	
+		return true;
+	return false;
 }
 
 userSchema.methods.toJSON = function() {

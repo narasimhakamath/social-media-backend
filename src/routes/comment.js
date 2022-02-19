@@ -1,12 +1,16 @@
 const express = require('express');
 const Comment = require('../models/comment');
 const Post = require('../models/post');
+const Notification = require('../models/notification');
 
 const authentication = require('../middlewares/authentication');
 
 const router = express.Router();
 
 router.post('/comments', authentication, async (req, res) => {
+	if(!req['body']['commentID'] && !req['body']['postID'])
+		return res.status(403).json({result: false, message: 'Invalid request payload.'});
+
 	const comment = new Comment({
 		comment: req['body']['comment'],
 		postID: req['body']['postID'],
@@ -17,19 +21,44 @@ router.post('/comments', authentication, async (req, res) => {
 	if(!post)
 		res.status(400).json({result: false, message: 'Invalid post ID.'});
 
+	const notificationData = {
+		fromUserID: req['user']['_id'],
+		toUserID: post['userID'],
+		activityType: 'comment',
+		parentActivity: 'post',
+		parentActivitySourceID: req['body']['postID']
+	}
+
 	try {
 		await comment.save();
+		notificationData['activitySourceID'] = comment['_id'];
+		await Notification.sendNotification(notificationData);
 		res.status(201).json({result: true, message: 'Comment added successfully.', data: comment});
 	} catch(e) {
 		res.status(400).json({result: false, message: e.message});
 	}
 });
 
-router.get('/comments/:postID', authentication, async (req, res) => {
+router.get('/comments/recentComments', authentication, async (req, res) => {
+	const userID = req['user']['_id'];
+
+	const posts = await Post.find({userID}).select('_id');
+	const postIDs = new Array();
+	for(let post of posts) {
+		postIDs.push(post['_id']);
+	}
+
+	const comments = await Comment.find({postID: {$in: postIDs}}).sort({createdAt: -1}).select('comment').populate('userID', '_id username name');
+	if(!comments.length)
+		return res.status(404).json({result: false, message: 'No comments found.'});
+	res.status(200).json({result: true, message: 'Success.', data: comments});
+});
+
+router.get('/comments/post/:postID', authentication, async (req, res) => {
 	const postID = req['params']['postID'];
 
 	const page = parseInt(req['query']['page'], 10) || 1;
-	const limit = parseInt(req['query']['limit'], 10) || 5;
+	const limit = parseInt(req['query']['limit'], 10) || 100;
 	const startIndex = (page - 1) * limit;
 	const endIndex = page * limit;
 

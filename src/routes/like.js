@@ -39,7 +39,7 @@ router.post('/likes', authentication, async (req, res) => {
 	}
 });
 
-router.get('/likes/:entity/:entityID', async (req, res) => {
+router.get('/likes/:entity/:entityID', authentication, async (req, res) => {
 	const entity = req['params']['entity'];
 	const supportedEntities = ['post', 'comment'];
 	if(!supportedEntities.includes(entity))

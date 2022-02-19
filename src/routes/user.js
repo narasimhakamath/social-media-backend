@@ -7,19 +7,18 @@ const router = express.Router();
 
 router.post('/users/signup', async (req, res) => {
 	try {
-		const isUsernameExists = await User.isUsernameExists(req.body.username);
+		await User.isUsernameExists(req.body.username);
 
 		const user = new User({
 			name: req['body']['name'],
 			username: req['body']['username'],
 			password: req['body']['password'],
 		});
-		const token = await user.generateAuthenticationToken();
-
 		await user.save();
+		const token = await user.generateAuthenticationToken();
 		res.status(201).json({result: true, message: 'Account created successfully.', token});
 	} catch(error) {
-		res.status(400).json({result: false, message: 'Invalid request.'});
+		res.status(400).json({result: false, message: error.message});
 	}
 });
 

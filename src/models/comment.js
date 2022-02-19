@@ -20,6 +20,8 @@ const commentSchema = new mongoose.Schema({
 	timestamps: true
 });
 
+commentSchema.index({comment: 1, postID: 1, userID: 1}, {unique: true});
+
 commentSchema.methods.toJSON = function() {
 	const comment = this;
 	const commentObject = comment.toObject();

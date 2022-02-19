@@ -80,4 +80,27 @@ router.get('/likes/:entity/:entityID', authentication, async (req, res) => {
 	res.status(200).json({result: true, message: 'Fetching data successfully.', data: likesData, pagination, total});
 });
 
+router.get('/likes/getMyLikedComments', authentication, async(req, res) => {
+	const likes = await Like
+		.find({commentID: {$ne: null}})
+		.select('_id')
+		.sort({createdAt: -1})
+		.populate({path: 'commentID', select: 'comment userID', match: {userID: req['user']['_id']}})
+		.populate({path: 'userID', select: 'name'});
+
+	const likesData = new Array();
+	for(let like of likes) {
+		if(like['commentID']) {
+			likesData.push({
+				_id: like['_id'],
+				comment: like['commentID']['comment'],
+				likedByUserID: like['userID']['_id'],
+				likedByUser: like['userID']['name'],
+			});
+		}
+	}
+
+	res.status(200).json({result: true, message: 'Fetching data successfully.', data: likesData});
+});
+
 module.exports = router;

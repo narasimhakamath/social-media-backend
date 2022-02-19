@@ -18,6 +18,8 @@ const likeSchema = new mongoose.Schema({
 	timestamps: true
 });
 
+likeSchema.index({postID: 1, commentID: 1, userID: 1}, {unique: true});
+
 likeSchema.methods.toJSON = function() {
 	const like = this;
 	const likeObject = like.toObject();

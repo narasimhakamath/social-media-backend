@@ -11,16 +11,21 @@ const notificationSchema = new mongoose.Schema({
 		required: true,
 		ref: 'User',
 	},
-	message: {
-		type: String,
-		required: true,
-		trim: true
-	},
 	activityType: {
 		type: String,
-		enum: ['likes', 'comments']
+		enum: ['like', 'comment'],
+		required: true
 	},
 	activitySourceID: {
+		type: mongoose.Schema.Types.ObjectId,
+		required: true,
+	},
+	parentActivity: {
+		type: String,
+		enum: ['comment', 'post'],
+		required: true
+	},
+	parentActivitySourceID: {
 		type: mongoose.Schema.Types.ObjectId,
 		required: true,
 	},
@@ -32,10 +37,35 @@ const notificationSchema = new mongoose.Schema({
 	timestamps: true
 });
 
+
 notificationSchema.methods.toJSON = function() {
 	const notification = this;
 	const notificationObject = notification.toObject();
 	return notificationObject;
+}
+
+notificationSchema.statics.sendNotification = async (notificationData) => {
+	if(notificationData['fromUserID'].toString() === notificationData['toUserID'].toString())
+		return false;
+
+	let isProceed = false;
+	if(notificationData['activityType'] === 'like') {
+		if(notificationData['parentActivity'] === 'comment') {
+			isProceed = true;
+		} else if(notificationData['parentActivity'] === 'post') {
+			isProceed = true;
+		}
+	} else if(notificationData['activityType'] === 'comment') {
+		if(notificationData['parentActivity'] === 'post') {
+			isProceed = true;
+		}
+	}
+
+	if(!isProceed)
+		return false;
+
+	const notification = new Notification(notificationData);
+	notification.save();
 }
 
 const Notification = mongoose.model('Notification', notificationSchema);

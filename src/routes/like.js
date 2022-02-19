@@ -2,37 +2,56 @@ const express = require('express');
 const Like = require('../models/like');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
+const Notification = require('../models/notification');
 
 const authentication = require('../middlewares/authentication');
 
 const router = express.Router();
 
 router.post('/likes', authentication, async (req, res) => {
-	const postID = req['body']['postID'] || null;
-	const commentID = req['body']['commentID'] || null;
+	if(!req['body']['postID'] && !req['body']['commentID'])
+		return res.status(403).json({result: false, message: 'Invalid request payload.'});
 
 	let existingLike = null;
+	let toUserID = null;
+
+	const notificationData = {
+		fromUserID: req['user']['id'],
+		activityType: 'like'
+	}
+
 	const iData = {userID: req['user']['_id']};
 	if(req['body']['postID']) {
 		const post = await Post.findById(req['body']['postID']);
 		if(!post)
 			return res.status(400).json({result: false, message: 'Invalid post ID.'});
-		existingLike = await Like.findOne({postID: req['body']['postID'], userID: req['user']['_id']});
+		toUserID = post['userID'];
+
 		iData['postID'] = req['body']['postID'];
-	} else {
+		notificationData['parentActivity'] = 'post';
+		notificationData['parentActivitySourceID'] = req['body']['postID'];
+		existingLike = await Like.findOne({postID: req['body']['postID'], userID: req['user']['_id']});
+	} else if(req['body']['commentID']) {
 		const comment = await Comment.findById(req['body']['commentID']);
 		if(!comment)
 			return res.status(400).json({result: false, message: 'Invalid comment ID.'});
+		toUserID = comment['userID'];
+
+		notificationData['parentActivity'] = 'comment';
+		notificationData['parentActivitySourceID'] = req['body']['commentID'];
 		existingLike = await Like.findOne({commentID: req['body']['commentID'], userID: req['user']['_id']});
-		iData['commentID'] = req['body']['commentID'];
 	}
 
 	if(existingLike)
 		return res.status(400).json({result: false, message: "Liked has been added already."});
 
+	notificationData['toUserID'] = toUserID;
+
 	try {
 		const like = new Like(iData);
 		await new Like(iData).save();
+		notificationData['activitySourceID'] = like['_id'].toString();
+		Notification.sendNotification(notificationData);
 		res.status(201).json({result: true, message: 'Like added successfully.', data: like});
 	} catch(e) {
 		res.status(400).json({result: false, message: e.message});

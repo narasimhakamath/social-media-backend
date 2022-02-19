@@ -6,6 +6,9 @@ const authentication = require('../middlewares/authentication');
 const router = express.Router();
 
 router.post('/posts', authentication, async (req, res) => {
+	if(!req['body']['title'] || !req['body']['content'])
+		return res.status(403).json({result: false, message: 'Invalid request payload.'});
+
 	const post = new Post({
 		title: req['body']['title'],
 		content: req['body']['content'],

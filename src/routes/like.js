@@ -9,6 +9,8 @@ const authentication = require('../middlewares/authentication');
 const router = express.Router();
 
 router.post('/likes', authentication, async (req, res) => {
+	const userID = req['user']['_id'];
+
 	if(!req['body']['postID'] && !req['body']['commentID'])
 		return res.status(403).json({result: false, message: 'Invalid request payload.'});
 
@@ -16,11 +18,11 @@ router.post('/likes', authentication, async (req, res) => {
 	let toUserID = null;
 
 	const notificationData = {
-		fromUserID: req['user']['id'],
+		fromUserID: userID,
 		activityType: 'like'
 	}
 
-	const iData = {userID: req['user']['_id']};
+	const iData = {userID};
 	if(req['body']['postID']) {
 		const post = await Post.findById(req['body']['postID']);
 		if(!post)
@@ -30,16 +32,17 @@ router.post('/likes', authentication, async (req, res) => {
 		iData['postID'] = req['body']['postID'];
 		notificationData['parentActivity'] = 'post';
 		notificationData['parentActivitySourceID'] = req['body']['postID'];
-		existingLike = await Like.findOne({postID: req['body']['postID'], userID: req['user']['_id']});
+		existingLike = await Like.findOne({postID: req['body']['postID'], userID});
 	} else if(req['body']['commentID']) {
 		const comment = await Comment.findById(req['body']['commentID']);
 		if(!comment)
 			return res.status(400).json({result: false, message: 'Invalid comment ID.'});
 		toUserID = comment['userID'];
 
+		iData['commentID'] = req['body']['commentID'];
 		notificationData['parentActivity'] = 'comment';
 		notificationData['parentActivitySourceID'] = req['body']['commentID'];
-		existingLike = await Like.findOne({commentID: req['body']['commentID'], userID: req['user']['_id']});
+		existingLike = await Like.findOne({commentID: req['body']['commentID'], userID});
 	}
 
 	if(existingLike)
@@ -99,28 +102,28 @@ router.get('/likes/:entity/:entityID', authentication, async (req, res) => {
 	res.status(200).json({result: true, message: 'Fetching data successfully.', data: likesData, pagination, total});
 });
 
-router.get('/likes/getMyLikedComments', authentication, async(req, res) => {
-	const likes = await Like
-		.find({commentID: {$ne: null}})
-		.select('_id')
-		.sort({createdAt: -1})
-		.populate({path: 'commentID', select: 'comment userID', match: {userID: req['user']['_id']}})
-		.populate({path: 'userID', select: 'name'});
+// router.get('/likes/getMyLikedComments', authentication, async(req, res) => {
+// 	const likes = await Like
+// 		.find({commentID: {$ne: null}})
+// 		.select('_id')
+// 		.sort({createdAt: -1})
+// 		.populate({path: 'commentID', select: 'comment userID', match: {userID: req['user']['_id']}})
+// 		.populate({path: 'userID', select: 'name'});
 
-	const likesData = new Array();
-	for(let like of likes) {
-		if(like['commentID']) {
-			likesData.push({
-				_id: like['_id'],
-				comment: like['commentID']['comment'],
-				likedByUserID: like['userID']['_id'],
-				likedByUser: like['userID']['name'],
-			});
-		}
-	}
+// 	const likesData = new Array();
+// 	for(let like of likes) {
+// 		if(like['commentID']) {
+// 			likesData.push({
+// 				_id: like['_id'],
+// 				comment: like['commentID']['comment'],
+// 				likedByUserID: like['userID']['_id'],
+// 				likedByUser: like['userID']['name'],
+// 			});
+// 		}
+// 	}
 
-	res.status(200).json({result: true, message: 'Fetching data successfully.', data: likesData});
-});
+// 	res.status(200).json({result: true, message: 'Fetching data successfully.', data: likesData});
+// });
 
 // GET API to fetch the latest list of users liking my posts.
 router.get('/likes/recentLikes', authentication, async (req, res) => {
@@ -149,6 +152,34 @@ router.get('/likes/recentLikes', authentication, async (req, res) => {
 	}
 
 	res.status(200).json({result: true, message: 'Success.', data: likesData});
+});
+
+// API to fetch the list of comments/users who liked my comments on any post.
+router.get('/likes/myLikedComments', authentication, async (req, res) => {
+	const userID = req['user']['_id'];
+
+	const comments = await Comment.find({userID}).select('_id');
+	const commentIDs = new Array();
+	for(let comment of comments) {
+		commentIDs.push(comment['_id']);
+	}
+
+	const likes = await Like.find({commentID: {$in: commentIDs}, userID: {$nin: userID}}).sort({createdAt: -1}).populate('commentID', 'comment').populate('userID', 'username name');
+	if(!likes.length)
+		return res.status(404).json({result: false, message: 'No likes found.'});
+
+	const likesData = new Array();
+	for(let like of likes) {
+		likesData.push({
+			_id: like['_id'],
+			commentID: like['commentID']['_id'],
+			comment: like['commentID']['comment'],
+			userID: like['userID']['_id'],
+			userName: like['userID']['name']
+		});
+	}
+
+	return res.status(200).json({result: true, message: 'Success.', data: likesData});
 });
 
 module.exports = router;

@@ -122,4 +122,33 @@ router.get('/likes/getMyLikedComments', authentication, async(req, res) => {
 	res.status(200).json({result: true, message: 'Fetching data successfully.', data: likesData});
 });
 
+// GET API to fetch the latest list of users liking my posts.
+router.get('/likes/recentLikes', authentication, async (req, res) => {
+	const userID = req['user']['_id'];
+
+	const posts = await Post.find({userID}).select('_id');
+	const postIDs = new Array();
+	for(let post of posts) {
+		postIDs.push(post['_id']);
+	}
+
+	const likes = await Like.find({postID: {$in: postIDs}, userID: {$nin: userID}}).sort({createdAt: -1}).populate('postID', 'title').populate('userID', 'username name');
+	if(!likes.length)
+		return res.status(404).json({result: false, message: 'No likes found.'});
+
+	const likesData = new Array();
+	for(let like of likes) {
+		likesData.push({
+			_id: like['_id'],
+			postID: like['postID']['_id'],
+			postTitle: like['postID']['title'],
+			postTitle: like['postID']['title'],
+			userID: like['userID']['_id'],
+			userName: like['userID']['name']
+		});
+	}
+
+	res.status(200).json({result: true, message: 'Success.', data: likesData});
+});
+
 module.exports = router;

@@ -39,6 +39,7 @@ router.post('/comments', authentication, async (req, res) => {
 	}
 });
 
+// GET API to fetch the list of user comments on my posts.
 router.get('/comments/recentComments', authentication, async (req, res) => {
 	const userID = req['user']['_id'];
 
@@ -54,7 +55,7 @@ router.get('/comments/recentComments', authentication, async (req, res) => {
 	res.status(200).json({result: true, message: 'Success.', data: comments});
 });
 
-router.get('/comments/post/:postID', authentication, async (req, res) => {
+router.get('/comments/recentComments/:postID', authentication, async (req, res) => {
 	const postID = req['params']['postID'];
 
 	const page = parseInt(req['query']['page'], 10) || 1;
